@@ -33,9 +33,10 @@ interface ModelSelectorProps {
   onModelSelect: (modelId: string) => void;
   isDownloading: boolean;
   downloadProgress: number;
+  error?: string;
 }
 
-export default function ModelSelector({ onModelSelect, isDownloading, downloadProgress }: ModelSelectorProps) {
+export default function ModelSelector({ onModelSelect, isDownloading, downloadProgress, error }: ModelSelectorProps) {
   const [selectedModel, setSelectedModel] = useState<string>('');
 
   const handleDownload = () => {
@@ -52,6 +53,12 @@ export default function ModelSelector({ onModelSelect, isDownloading, downloadPr
           <p className="text-slate-300">Choose your AI model to get started</p>
           <p className="text-sm text-slate-400 mt-2">Download once, chat offline forever</p>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-600/20 border border-red-600/50 rounded-lg">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
 
         {!isDownloading ? (
           <>

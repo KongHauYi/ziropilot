@@ -25,6 +25,7 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(getSettings());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const initApp = async () => {
@@ -56,18 +57,21 @@ function App() {
     setCurrentModel(modelId);
     setAppState('downloading');
     setDownloadProgress(0);
+    setError(null);
 
     try {
       await loadModel(modelId, (progress) => {
-        setDownloadProgress(progress * 100);
+        setDownloadProgress(Math.min(progress, 99));
       });
       await saveModel(modelId, modelId);
       setDownloadProgress(100);
       setAppState('chat');
     } catch (error) {
       console.error('Failed to download model:', error);
-      alert('Failed to download model. Please try again.');
+      const errorMsg = error instanceof Error ? error.message : 'Failed to download model. Please try again.';
+      setError(errorMsg);
       setAppState('model-selection');
+      setCurrentModel(null);
     }
   };
 
@@ -154,6 +158,7 @@ function App() {
         onModelSelect={handleModelSelect}
         isDownloading={appState === 'downloading'}
         downloadProgress={downloadProgress}
+        error={error || undefined}
       />
     );
   }

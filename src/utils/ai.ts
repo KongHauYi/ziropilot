@@ -1,7 +1,15 @@
-import { pipeline, TextGenerationPipeline } from '@xenova/transformers';
+import { pipeline, TextGenerationPipeline, env } from '@xenova/transformers';
 
 let generator: TextGenerationPipeline | null = null;
 let currentModelId: string | null = null;
+
+env.allowLocalModels = true;
+env.allowRemoteModels = true;
+
+if (typeof self !== 'undefined' && self.location) {
+  const workerScript = `${self.location.origin}/transformers-worker.js`;
+  env.localModelPath = 'models/';
+}
 
 export interface GenerateOptions {
   temperature?: number;
@@ -18,17 +26,25 @@ export const loadModel = async (
   }
 
   try {
+    let lastProgress = 0;
     generator = await pipeline('text-generation', modelId, {
-      progress_callback: (progress: { status: string; progress?: number; file?: string }) => {
-        if (progress.progress !== undefined && onProgress) {
-          onProgress(progress.progress);
+      progress_callback: (progress: any) => {
+        if (progress.status === 'downloading' && progress.progress !== undefined) {
+          lastProgress = Math.min(100, Math.max(lastProgress, progress.progress * 100));
+          if (onProgress) {
+            onProgress(lastProgress);
+          }
+        } else if (progress.status === 'loading_model' && onProgress) {
+          onProgress(95);
+        } else if (progress.status === 'ready' && onProgress) {
+          onProgress(100);
         }
       }
     });
     currentModelId = modelId;
   } catch (error) {
     console.error('Failed to load model:', error);
-    throw error;
+    throw new Error(`Model loading failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
@@ -46,22 +62,18 @@ export const generateText = async (
       temperature: options.temperature ?? 0.7,
       max_new_tokens: options.max_new_tokens ?? 256,
       do_sample: options.do_sample ?? true,
-      return_full_text: false,
-      callback_function: onToken ? (output: { token: { text: string } }[]) => {
-        if (output && output.length > 0 && output[0].token) {
-          onToken(output[0].token.text);
-        }
-      } : undefined
+      return_full_text: false
     });
 
-    if (Array.isArray(result) && result[0]?.generated_text) {
-      return result[0].generated_text;
+    if (Array.isArray(result) && result.length > 0) {
+      const text = result[0]?.generated_text || '';
+      return text;
     }
 
     return '';
   } catch (error) {
     console.error('Generation error:', error);
-    throw error;
+    throw new Error(`Generation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
