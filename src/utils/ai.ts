@@ -5,11 +5,7 @@ let currentModelId: string | null = null;
 
 env.allowLocalModels = true;
 env.allowRemoteModels = true;
-
-if (typeof self !== 'undefined' && self.location) {
-  const workerScript = `${self.location.origin}/transformers-worker.js`;
-  env.localModelPath = 'models/';
-}
+env.allowUsageAnalytics = false;
 
 export interface GenerateOptions {
   temperature?: number;
@@ -27,24 +23,47 @@ export const loadModel = async (
 
   try {
     let lastProgress = 0;
+
     generator = await pipeline('text-generation', modelId, {
       progress_callback: (progress: any) => {
-        if (progress.status === 'downloading' && progress.progress !== undefined) {
-          lastProgress = Math.min(100, Math.max(lastProgress, progress.progress * 100));
-          if (onProgress) {
-            onProgress(lastProgress);
+        try {
+          if (progress.status === 'downloading' && typeof progress.progress === 'number') {
+            lastProgress = Math.min(99, Math.max(lastProgress, progress.progress * 100));
+            if (onProgress) {
+              onProgress(lastProgress);
+            }
+          } else if (progress.status === 'progress' && typeof progress.progress === 'number') {
+            lastProgress = Math.min(99, Math.max(lastProgress, progress.progress * 100));
+            if (onProgress) {
+              onProgress(lastProgress);
+            }
+          } else if (progress.status === 'loading' && onProgress) {
+            onProgress(90);
           }
-        } else if (progress.status === 'loading_model' && onProgress) {
-          onProgress(95);
-        } else if (progress.status === 'ready' && onProgress) {
-          onProgress(100);
+        } catch (e) {
+          console.debug('Progress callback error:', e);
         }
       }
     });
+
+    if (onProgress) {
+      onProgress(100);
+    }
     currentModelId = modelId;
   } catch (error) {
     console.error('Failed to load model:', error);
-    throw new Error(`Model loading failed: ${error instanceof Error ? error.message : String(error)}`);
+    let errorMessage = 'Failed to download model';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      if (error.message.includes('JSON')) {
+        errorMessage = 'Network error downloading model. Please check your internet connection and try again.';
+      } else if (error.message.includes('404')) {
+        errorMessage = 'Model not found. Please try a different model.';
+      }
+    }
+
+    throw new Error(errorMessage);
   }
 };
 

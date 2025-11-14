@@ -13,19 +13,19 @@ const AVAILABLE_MODELS: Model[] = [
     id: 'Xenova/gpt2',
     name: 'GPT-2',
     size: '~500MB',
-    description: 'Fast and lightweight, great for quick responses'
+    description: 'Fast and lightweight, ideal for testing and quick responses'
   },
   {
-    id: 'Xenova/TinyLlama-1.1B-Chat-v1.0',
-    name: 'TinyLlama 1.1B',
-    size: '~650MB',
-    description: 'Optimized for chat, balanced performance'
+    id: 'Xenova/distilgpt2',
+    name: 'DistilGPT-2',
+    size: '~350MB',
+    description: 'Ultra-fast and compact, great for slower connections'
   },
   {
-    id: 'Xenova/phi-1_5',
-    name: 'Phi-1.5',
-    size: '~800MB',
-    description: 'Higher quality responses, slower generation'
+    id: 'Xenova/gpt2-medium',
+    name: 'GPT-2 Medium',
+    size: '~850MB',
+    description: 'Better quality than base GPT-2, still reasonable size'
   }
 ];
 
